@@ -1,0 +1,191 @@
+.gtdx-books {
+	margin-block: 2rem;
+}
+
+.gtdx-books__title {
+	margin-block-end: 0.25em;
+}
+
+.gtdx-books__intro {
+	margin-block-end: 1.5em;
+	opacity: 0.8;
+}
+
+.gtdx-books__message {
+	padding: 1rem 1.25rem;
+	border-inline-start: 4px solid currentColor;
+	background: rgba(127, 127, 127, 0.08);
+}
+
+.gtdx-books__message--error {
+	border-inline-start-color: #b32d2e;
+}
+
+.gtdx-books__message--debug {
+	margin-block-start: 0.5rem;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.85em;
+	opacity: 0.75;
+}
+
+/* Grille responsive sans media query : les colonnes s'ajustent d'elles-mêmes. */
+.gtdx-books__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+	gap: 1.75rem 1.25rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.gtdx-books__item {
+	display: flex;
+	margin: 0;
+	/* Chaque carte devient un conteneur de requête : voir plus bas. */
+	container-type: inline-size;
+}
+
+.gtdx-book {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	height: 100%;
+}
+
+.gtdx-book__body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.gtdx-book__cover {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 2 / 3;
+	object-fit: cover;
+	border-radius: 3px;
+	background: rgba(127, 127, 127, 0.12);
+}
+
+.gtdx-book__cover--placeholder {
+	border: 1px dashed rgba(127, 127, 127, 0.5);
+}
+
+.gtdx-book__title {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.35;
+}
+
+.gtdx-book__link {
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
+}
+
+/* Cible de focus nettement visible, y compris sur fond sombre. */
+.gtdx-book__link:focus-visible {
+	outline: 3px solid currentColor;
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
+.gtdx-book__authors {
+	margin: 0;
+	font-size: 0.9rem;
+	line-height: 1.35;
+	/* Certains thèmes colorent dd et p en dehors du texte courant. */
+	color: inherit;
+}
+
+/*
+ * Métadonnées poussées en bas de carte : elles s'alignent ainsi d'une carte à
+ * l'autre, quel que soit le nombre de lignes pris par le titre ou les auteurs.
+ */
+.gtdx-book__meta {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	margin: auto 0 0;
+	font-size: 0.85rem;
+	line-height: 1.4;
+}
+
+/*
+ * Un libellé et sa valeur par ligne, en flux plutôt qu'en deux colonnes : sur
+ * une carte de 200 px, une colonne de libellés en consommait près de la moitié
+ * et repoussait « Alexandre Dumas, Auguste Maquet » sur quatre lignes. Le « : »
+ * du libellé ne peut plus non plus se retrouver seul à la ligne.
+ */
+.gtdx-book__meta-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 0.4em;
+}
+
+.gtdx-book__meta dt {
+	font-weight: 600;
+	opacity: 0.7;
+}
+
+.gtdx-book__meta dt::after {
+	content: " :";
+}
+
+.gtdx-book__meta dd {
+	margin: 0;
+	color: inherit;
+}
+
+/*
+ * Carte large : couverture à gauche, texte à droite.
+ *
+ * La bascule interroge la largeur de la CARTE, pas celle de l'écran — d'où une
+ * container query et non une media query. C'est le critère juste : une carte
+ * étroite doit empiler, une carte large doit se déplier, indépendamment de
+ * l'appareil et du gabarit du thème.
+ *
+ * En pratique la grille passe à une colonne sur mobile, donc la carte devient
+ * large et se déplie. Une couverture pleine largeur suivie de son titre, puis
+ * de la couverture suivante, obligeait l'œil à rattacher chaque titre à l'image
+ * qui le précède ; côte à côte, la question ne se pose plus. Le filet de
+ * séparation renforce le découpage en lignes.
+ */
+@container (min-width: 320px) {
+
+	.gtdx-book {
+		flex-direction: row;
+		align-items: flex-start;
+		gap: 1rem;
+	}
+
+	.gtdx-book__cover {
+		flex: 0 0 clamp(88px, 30cqi, 132px);
+		width: auto;
+	}
+
+	.gtdx-books__item:not(:first-child) .gtdx-book {
+		border-block-start: 1px solid rgba(127, 127, 127, 0.25);
+		padding-block-start: 1.5rem;
+	}
+}
+
+/* Contenu réservé aux technologies d'assistance. */
+.gtdx-visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.gtdx-books * {
+		transition: none !important;
+	}
+}

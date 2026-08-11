@@ -1,0 +1,19 @@
+# Dépendances
+/vendor/
+/node_modules/
+
+# Environnement local
+.env
+.env.*
+*.local
+
+# WordPress (ne jamais versionner le cœur ni les fichiers sensibles)
+wp-config.php
+wp-content/uploads/
+
+# Système / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
