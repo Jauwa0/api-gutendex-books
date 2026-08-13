@@ -128,6 +128,7 @@ defined( 'ABSPATH' ) || exit;
 		<li><code>search</code> - <?php esc_html_e( 'recherche par titre ou auteur.', 'gutendex-books' ); ?></li>
 		<li><code>title</code> / <code>intro</code> - <?php esc_html_e( 'personnalisation du titre et du texte d\'introduction.', 'gutendex-books' ); ?></li>
 		<li><code>heading_level</code> - <?php esc_html_e( 'niveau du titre, de h2 à h6 (défaut : h2).', 'gutendex-books' ); ?></li>
+		<li><code>form</code> - <?php esc_html_e( 'affiche un formulaire de recherche et de choix de langue (défaut : no).', 'gutendex-books' ); ?></li>
 	</ul>
 
 	<p><code>[books_list limit="12" lang="fr" title="Nos classiques francophones"]</code></p>

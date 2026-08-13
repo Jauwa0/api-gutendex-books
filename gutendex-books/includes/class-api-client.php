@@ -25,9 +25,10 @@ class GTDX_Api_Client {
 	 * Retourne les livres, depuis le cache si possible.
 	 *
 	 * @param array $args Arguments bruts : limit, lang, search.
+	 * @param bool  $track Inscrire la clé au registre du cache.
 	 * @return array|WP_Error Tableau de livres normalisés, ou WP_Error.
 	 */
-	public static function get_books( array $args = array() ) {
+	public static function get_books( array $args = array(), $track = true ) {
 
 		$args   = self::normalize_args( $args );
 		$key    = GTDX_Cache::build_key( self::cache_args( $args ) );
@@ -44,16 +45,17 @@ class GTDX_Api_Client {
 			return array_slice( $cached, 0, $args['limit'] );
 		}
 
-		return self::refresh( $args );
+		return self::refresh( $args, $track );
 	}
 
 	/**
 	 * Force un appel à l'API et met le résultat en cache.
 	 *
-	 * @param array $args Arguments (bruts ou déjà normalisés).
+	 * @param array $args  Arguments (bruts ou déjà normalisés).
+	 * @param bool  $track Inscrire la clé au registre du cache.
 	 * @return array|WP_Error
 	 */
-	public static function refresh( array $args = array() ) {
+	public static function refresh( array $args = array(), $track = true ) {
 
 		$args       = self::normalize_args( $args );
 		$cache_args = self::cache_args( $args );
@@ -69,6 +71,11 @@ class GTDX_Api_Client {
 			// n'est mise en cache que faute de mieux, et brièvement, pour ne pas
 			// marteler l'API à chaque affichage de page.
 			if ( ! is_array( $existing ) || isset( $existing['__error'] ) ) {
+				// Un timeout se rejoue vite avec succès : on le mémorise moins longtemps.
+				$ttl = 'gtdx_http_failure' === $result->get_error_code()
+					? GTDX_Cache::RETRY_TTL
+					: GTDX_Cache::ERROR_TTL;
+
 				GTDX_Cache::set(
 					$key,
 					array(
@@ -76,7 +83,8 @@ class GTDX_Api_Client {
 						'__message' => $result->get_error_message(),
 					),
 					$cache_args,
-					GTDX_Cache::ERROR_TTL
+					$ttl,
+					$track
 				);
 			}
 
@@ -85,7 +93,7 @@ class GTDX_Api_Client {
 
 		// La page complète est mise en cache, la troncature est faite au retour :
 		// deux shortcodes ne différant que par `limit` partagent ainsi l'entrée.
-		GTDX_Cache::set( $key, $result, $cache_args );
+		GTDX_Cache::set( $key, $result, $cache_args, null, $track );
 		GTDX_Cache::touch_last_fetch();
 
 		return array_slice( $result, 0, $args['limit'] );
@@ -111,10 +119,18 @@ class GTDX_Api_Client {
 
 		$url = add_query_arg( $query, self::API_ENDPOINT );
 
+		/**
+		 * Filtre le timeout de l'appel HTTP.
+		 * Gutendex peut mettre plus de 20 s à froid sur certaines langues : le
+		 * relever évite l'échec, au prix d'un rendu de page bloqué d'autant.
+		 * @param int $timeout Durée en secondes.
+		 */
+		$timeout = max( 1, (int) apply_filters( 'gtdx_http_timeout', self::TIMEOUT ) );
+
 		$response = wp_remote_get(
 			$url,
 			array(
-				'timeout'    => self::TIMEOUT,
+				'timeout'    => $timeout,
 				'user-agent' => 'Gutendex Books WordPress plugin/' . GTDX_VERSION . '; ' . home_url( '/' ),
 				'headers'    => array( 'Accept' => 'application/json' ),
 			)

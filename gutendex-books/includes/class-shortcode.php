@@ -21,6 +21,10 @@ class GTDX_Shortcode {
 	/** Niveaux de titre autorisés pour la section, du plus haut au plus bas. */
 	const HEADING_LEVELS = array( 'h2', 'h3', 'h4', 'h5', 'h6' );
 
+	/** Paramètres de requête du formulaire. Préfixés : `s` déclencherait la recherche WordPress. */
+	const PARAM_SEARCH = 'gtdx_search';
+	const PARAM_LANG   = 'gtdx_lang';
+
 	/** Compteur d'instances, pour générer des identifiants uniques. */
 	private static $instance_count = 0;
 
@@ -69,10 +73,14 @@ class GTDX_Shortcode {
 				'title'         => __( 'Une sélection de livres du domaine public', 'gutendex-books' ),
 				'intro'         => __( 'Titres les plus téléchargés sur Project Gutenberg, via l\'API Gutendex.', 'gutendex-books' ),
 				'heading_level' => 'h2',
+				'form'          => 'no',
 			),
 			$atts,
 			self::TAG
 		);
+
+		// yes/true/1/on contre no/false/0/off, casse et espaces compris.
+		$show_form = filter_var( $atts['form'], FILTER_VALIDATE_BOOLEAN );
 
 		// Filet de sécurité : un shortcode rendu avant `wp_enqueue_scripts`
 		// (en-tête de thème, appel direct à do_shortcode()) trouverait sinon
@@ -85,16 +93,28 @@ class GTDX_Shortcode {
 
 		++self::$instance_count;
 
+		// Le formulaire prend le pas sur les attributs, qui restent le repli.
+		if ( $show_form ) {
+			$search = self::query_param( self::PARAM_SEARCH, (string) $atts['search'] );
+			$lang   = self::query_param( self::PARAM_LANG, (string) $atts['lang'] );
+		} else {
+			$search = (string) $atts['search'];
+			$lang   = (string) $atts['lang'];
+		}
+
 		$books = GTDX_Api_Client::get_books(
 			array(
 				'limit'  => $atts['limit'],
-				'lang'   => $atts['lang'],
-				'search' => $atts['search'],
-			)
+				'lang'   => $lang,
+				'search' => $search,
+			),
+			// Une recherche de visiteur n'entre pas au registre du cache.
+			! $show_form
 		);
 
 		$title         = (string) $atts['title'];
 		$heading_level = self::sanitize_heading_level( $atts['heading_level'] );
+		$id_suffix     = self::$instance_count;
 
 		return GTDX_Plugin::render_template(
 			'books-list',
@@ -105,10 +125,97 @@ class GTDX_Shortcode {
 				'intro'              => (string) $atts['intro'],
 				'heading_level'      => $heading_level,
 				'item_heading_level' => self::item_heading_level( $heading_level, '' !== $title ),
-				'heading_id'         => 'gtdx-books-heading-' . self::$instance_count,
+				'heading_id'         => 'gtdx-books-heading-' . $id_suffix,
+				'form'               => $show_form ? self::form_data( $search, $lang, $id_suffix ) : null,
 			)
 		);
 
+	}
+
+	/**
+	 * Lit un paramètre de requête, avec repli sur la valeur de l'attribut.
+	 *
+	 * @param string $name    Nom du paramètre.
+	 * @param string $default Valeur par défaut.
+	 * @return string
+	 */
+	private static function query_param( $name, $default ) {
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtre d'affichage en lecture seule, sans effet de bord.
+		if ( ! isset( $_GET[ $name ] ) ) {
+			return $default;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return sanitize_text_field( wp_unslash( $_GET[ $name ] ) );
+	}
+
+	/**
+	 * Données du formulaire de filtrage.
+	 *
+	 * @param string $search    Recherche courante.
+	 * @param string $lang      Langue courante.
+	 * @param int    $id_suffix Suffixe d'identifiant unique.
+	 * @return array
+	 */
+	private static function form_data( $search, $lang, $id_suffix ) {
+
+		/*
+		 * Un formulaire en GET voit le navigateur remplacer la chaîne de requête
+		 * de son action : les paramètres qui identifient la page — `page_id` en
+		 * permaliens simples — doivent repartir en champs cachés.
+		 */
+		$action = get_permalink();
+		$action = $action ? $action : home_url( '/' );
+		$hidden = array();
+		$query  = wp_parse_url( $action, PHP_URL_QUERY );
+
+		if ( $query ) {
+			wp_parse_str( $query, $hidden );
+		}
+
+		return array(
+			'action'       => strtok( $action, '?' ),
+			'reset'        => $action,
+			'hidden'       => $hidden,
+			'search'       => $search,
+			'lang'         => $lang,
+			'languages'    => self::languages(),
+			'param_search' => self::PARAM_SEARCH,
+			'param_lang'   => self::PARAM_LANG,
+			'search_id'    => 'gtdx-books-search-' . $id_suffix,
+			'lang_id'      => 'gtdx-books-lang-' . $id_suffix,
+		);
+	}
+
+	/**
+	 * Langues proposées : celles dont le catalogue Gutenberg dépasse 200 titres.
+	 *
+	 * @return array<string, string> Code ISO 639-1 => libellé.
+	 */
+	private static function languages() {
+
+		$languages = array(
+			'de' => __( 'Allemand', 'gutendex-books' ),
+			'en' => __( 'Anglais', 'gutendex-books' ),
+			'zh' => __( 'Chinois', 'gutendex-books' ),
+			'es' => __( 'Espagnol', 'gutendex-books' ),
+			'fi' => __( 'Finnois', 'gutendex-books' ),
+			'fr' => __( 'Français', 'gutendex-books' ),
+			'el' => __( 'Grec', 'gutendex-books' ),
+			'hu' => __( 'Hongrois', 'gutendex-books' ),
+			'it' => __( 'Italien', 'gutendex-books' ),
+			'nl' => __( 'Néerlandais', 'gutendex-books' ),
+			'pt' => __( 'Portugais', 'gutendex-books' ),
+			'sv' => __( 'Suédois', 'gutendex-books' ),
+		);
+
+		/**
+		 * Filtre la liste des langues du formulaire.
+		 *
+		 * @param array<string, string> $languages Code ISO 639-1 => libellé.
+		 */
+		return (array) apply_filters( 'gtdx_form_languages', $languages );
 	}
 
 	/**

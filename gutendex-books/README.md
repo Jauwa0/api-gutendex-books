@@ -26,6 +26,8 @@ Aucune dépendance à installer.
 | `title`         | *(texte par défaut)* | Titre de la section. Chaîne vide pour le masquer.          |
 | `intro`         | *(texte par défaut)* | Texte d'introduction. Chaîne vide pour le masquer.         |
 | `heading_level` | `h2`                 | Niveau du titre, de `h2` à `h6`.                           |
+| `form`          | `no`                 | `yes` affiche un formulaire de recherche et de langue.     |
+
 
 ```
 [books_list limit="12" lang="fr" title="Nos classiques francophones"]

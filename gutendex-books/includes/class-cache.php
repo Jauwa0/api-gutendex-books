@@ -39,6 +39,11 @@ class GTDX_Cache {
 	 */
 	const ERROR_TTL = 5 * MINUTE_IN_SECONDS;
 
+	/**
+	 * Durée de vie d'un échec réseau ou d'un timeout.
+	 */
+	const RETRY_TTL = MINUTE_IN_SECONDS;
+
 	/** Nombre maximum de jeux d'arguments suivis dans le registre. */
 	const MAX_TRACKED_KEYS = 20;
 
@@ -71,9 +76,11 @@ class GTDX_Cache {
 	 * @param mixed    $value Valeur à stocker.
 	 * @param array    $args  Arguments ayant produit cette entrée.
 	 * @param int|null $ttl   Durée de vie en secondes.
+	 * @param bool     $track Inscrire la clé au registre. Faux pour une requête
+	 *                        issue du formulaire.
 	 * @return void
 	 */
-	public static function set( $key, $value, array $args, $ttl = null ) {
+	public static function set( $key, $value, array $args, $ttl = null, $track = true ) {
 
 		if ( null === $ttl ) {
 			/**
@@ -85,7 +92,11 @@ class GTDX_Cache {
 		}
 
 		set_transient( $key, $value, max( 60, (int) $ttl ) );
-		self::track_key( $key, $args );
+
+		// Mise en cache
+		if ( $track ) {
+			self::track_key( $key, $args );
+		}
 	}
 
 	/**
